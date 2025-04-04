@@ -1,0 +1,31 @@
+{
+  "name": "namakabroudapi",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node start.js",
+    "data:import": "node src/utils/seeder -i",
+    "data:destroy": "node src/utils/seeder -d",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "create:admin": "node src/utils/createAdmin.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "API for managing security guards, areas, shifts, and leaves",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "moment-jalaali": "^0.10.4",
+    "mongoose": "^8.13.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "nodemon": "^3.1.9"
+  }
+}

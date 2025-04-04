@@ -1,0 +1,349 @@
+/* App.css - Main styles for the Guard Management System */
+
+/* RTL support and general settings */
+body {
+  direction: rtl;
+  text-align: right;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f5f5f5;
+}
+
+/* Fix bootstrap RTL specific issues */
+.dropdown-menu {
+  text-align: right;
+}
+
+.ms-auto {
+  margin-right: auto !important;
+  margin-left: 0 !important;
+}
+
+.me-auto {
+  margin-left: auto !important;
+  margin-right: 0 !important;
+}
+
+/* Cards styling */
+.card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  border: none;
+  margin-bottom: 20px;
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+  padding: 15px 20px;
+}
+
+/* Form controls */
+.form-control, .form-select {
+  padding: 10px 12px;
+}
+
+.form-control:focus, .form-select:focus {
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+/* Button styling */
+.btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+}
+
+/* Table styling */
+.table {
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table th {
+  font-weight: 600;
+  background-color: #f8f9fa;
+}
+
+/* Badge styling */
+.badge {
+  padding: 6px 10px;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+/* Dashboard statistics cards */
+.stats-card {
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+}
+
+.stats-icon {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+/* Login page styling */
+.login-container {
+  max-width: 450px;
+  margin: 80px auto;
+}
+
+.login-card {
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.login-logo {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+/* Detail view styling */
+.detail-header {
+  padding: 15px 0;
+  border-bottom: 1px solid #e5e5e5;
+  margin-bottom: 20px;
+}
+
+/* Alerts */
+.alert {
+  border-radius: 8px;
+  padding: 12px 20px;
+}
+
+/* Navigation styling */
+.navbar-brand {
+  font-weight: 600;
+}
+
+.nav-link {
+  padding: 8px 16px !important;
+}
+
+/* Animation for loading states */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* Make sure long content doesn't break the layout */
+.table-responsive {
+  overflow-x: auto;
+}
+
+/* Shift calendar colors */
+.shift-morning {
+  background-color: #e3f2fd;
+}
+
+.shift-afternoon {
+  background-color: #fff8e1;
+}
+
+.shift-night {
+  background-color: #e8eaf6;
+}
+
+/* Make form labels a bit bolder */
+.form-label {
+  font-weight: 500;
+}
+
+/* Small badge for notifications */
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  padding: 3px 6px;
+  border-radius: 50%;
+  background-color: #dc3545;
+  color: white;
+  font-size: 0.6rem;
+}
+
+/* Custom footer */
+.footer {
+  margin-top: 30px;
+  padding: 15px 0;
+  border-top: 1px solid #e5e5e5;
+  text-align: center;
+  color: #6c757d;
+}
+
+/* Main layout styles */
+.main-container {
+  min-height: calc(100vh - 56px);
+  padding: 1rem;
+}
+
+/* Dashboard cards */
+.dashboard-card {
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 100%;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-card .card-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.dashboard-card .card-title {
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-card .card-value {
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+/* Custom button styles */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon i {
+  margin-left: 0.5rem;
+}
+
+/* Table styles */
+.table-responsive {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.table thead th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+}
+
+/* Login page styles */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 400px;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+.app-logo {
+  width: 80px;
+  height: auto;
+  margin-bottom: 1.5rem;
+}
+
+/* Loading spinner */
+.page-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+/* Alert customization */
+.alert {
+  border-radius: 8px;
+}
+
+/* Badge customization */
+.badge {
+  padding: 0.5em 0.8em;
+  border-radius: 6px;
+}
+
+/* Navbar adjustments */
+.navbar-brand {
+  margin-left: 1rem;
+  margin-right: 0;
+}
+
+/* Footer styles */
+.footer {
+  background-color: #f8f9fa;
+  padding: 1rem 0;
+  border-top: 1px solid #e9ecef;
+  text-align: center;
+}
+
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+  .dashboard-card .card-icon {
+    font-size: 2rem;
+  }
+  
+  .dashboard-card .card-value {
+    font-size: 1.5rem;
+  }
+}
+
+/* Set icons to flip for RTL */
+.bi-arrow-left {
+  transform: scaleX(-1);
+}
+
+.bi-arrow-right {
+  transform: scaleX(-1);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
