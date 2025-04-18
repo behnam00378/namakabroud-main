@@ -123,4 +123,56 @@ export const formatErrorMessage = (error) => {
   }
   
   return 'خطا در برقراری ارتباط با سرور';
+};
+
+/**
+ * Format a time string from ISO format to readable format
+ * @param {string} isoString - ISO date string
+ * @returns {string} Formatted time (HH:MM)
+ */
+export const formatTime = (isoString) => {
+  try {
+    if (!isoString) return '';
+    
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return 'زمان نامعتبر';
+    
+    // Format with am/pm in Persian
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const formattedHours = hours < 10 ? `۰${hours}` : String(hours).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+    const formattedMinutes = minutes < 10 ? `۰${minutes}` : String(minutes).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+    
+    let timeString = `${formattedHours}:${formattedMinutes}`;
+    if (hours < 12) {
+      timeString += ' صبح';
+    } else if (hours < 18) {
+      timeString += ' بعد از ظهر';
+    } else {
+      timeString += ' شب';
+    }
+    
+    return timeString;
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return '';
+  }
+};
+
+/**
+ * Get Persian shift status name
+ * @param {string} status - Shift status
+ * @returns {string} Persian status name
+ */
+export const getShiftStatusName = (status) => {
+  switch (status) {
+    case 'completed':
+      return 'انجام شده';
+    case 'scheduled':
+      return 'برنامه‌ریزی شده';
+    case 'cancelled':
+      return 'لغو شده';
+    default:
+      return status || '';
+  }
 }; 

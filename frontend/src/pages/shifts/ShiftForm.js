@@ -41,18 +41,43 @@ const ShiftForm = () => {
     try {
       setLoadingShift(true);
       const response = await ShiftService.getShiftById(id);
+      console.log('Shift data received:', response.data);
       const shift = response.data;
       
       // Format date for the input (YYYY-MM-DD)
-      const formattedDate = new Date(shift.date).toISOString().split('T')[0];
+      let formattedDate;
+      try {
+        formattedDate = new Date(shift.date || shift.startTime).toISOString().split('T')[0];
+      } catch (err) {
+        console.error('Error formatting date:', err);
+        formattedDate = new Date().toISOString().split('T')[0];
+      }
+      
+      // Extract time from ISO string
+      let startTime = '08:00';
+      let endTime = '16:00';
+      try {
+        if (shift.startTime) {
+          const startDate = new Date(shift.startTime);
+          startTime = startDate.getHours().toString().padStart(2, '0') + ':' + 
+                     startDate.getMinutes().toString().padStart(2, '0');
+        }
+        if (shift.endTime) {
+          const endDate = new Date(shift.endTime);
+          endTime = endDate.getHours().toString().padStart(2, '0') + ':' + 
+                   endDate.getMinutes().toString().padStart(2, '0');
+        }
+      } catch (err) {
+        console.error('Error formatting time:', err);
+      }
       
       setFormData({
         date: formattedDate,
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        guardId: shift.guard?._id || '',
-        areaId: shift.area?._id || '',
-        status: shift.status,
+        startTime: startTime,
+        endTime: endTime,
+        guardId: shift.guardId?._id || shift.guardId || '',
+        areaId: shift.areaId?._id || shift.areaId || '',
+        status: shift.status || 'scheduled',
         notes: shift.notes || ''
       });
     } catch (err) {
@@ -96,12 +121,40 @@ const ShiftForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!formData.guardId) {
+      setError('لطفا یک نگهبان انتخاب کنید');
+      return;
+    }
+    
+    if (!formData.areaId) {
+      setError('لطفا یک منطقه انتخاب کنید');
+      return;
+    }
+    
+    const shiftData = {
+      date: formData.date,
+      startTime: formData.date + 'T' + formData.startTime + ':00',
+      endTime: formData.date + 'T' + formData.endTime + ':00',
+      guardId: formData.guardId,
+      areaId: formData.areaId,
+      status: formData.status,
+      notes: formData.notes
+    };
+    
+    // Handle time crossing to next day
+    const startHour = parseInt(formData.startTime.split(':')[0], 10);
+    const endHour = parseInt(formData.endTime.split(':')[0], 10);
+    
+    if (endHour < startHour) {
+      // End time is on the next day, adjust the end date
+      const endDate = new Date(formData.date);
+      endDate.setDate(endDate.getDate() + 1);
+      shiftData.endTime = endDate.toISOString().split('T')[0] + 'T' + formData.endTime + ':00';
+    }
+    
     try {
       setLoading(true);
       setError('');
-      
-      // Create data object
-      const shiftData = { ...formData };
       
       if (isEditMode) {
         await ShiftService.updateShift(id, shiftData);
@@ -109,12 +162,10 @@ const ShiftForm = () => {
         await ShiftService.createShift(shiftData);
       }
       
-      // Redirect back to list
       navigate('/shifts');
     } catch (err) {
       console.error('Error saving shift:', err);
       setError(err.response?.data?.message || 'خطا در ذخیره اطلاعات شیفت');
-    } finally {
       setLoading(false);
     }
   };

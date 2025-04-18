@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import ShiftService from '../../services/shiftService';
 import Alert from '../../components/layout/Alert';
 import { useAuth } from '../../context/AuthContext';
-import { formatPersianDate } from '../../utils/helpers';
+import { formatPersianDate, formatTime, getShiftStatusName } from '../../utils/helpers';
 
 const ShiftDetail = () => {
   const { id } = useParams();
@@ -70,19 +70,6 @@ const ShiftDetail = () => {
     }
   };
   
-  const getStatusName = (status) => {
-    switch (status) {
-      case 'completed':
-        return 'انجام شده';
-      case 'scheduled':
-        return 'برنامه‌ریزی شده';
-      case 'cancelled':
-        return 'لغو شده';
-      default:
-        return status;
-    }
-  };
-
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'completed':
@@ -156,21 +143,31 @@ const ShiftDetail = () => {
         <div className="card-body">
           <div className="row">
             <div className="col-md-6 mb-3">
-              <strong>تاریخ:</strong> {formatPersianDate(shift.date)}
+              <strong>تاریخ:</strong> {formatPersianDate(shift.date || shift.startTime || new Date())}
             </div>
             <div className="col-md-6 mb-3">
-              <strong>ساعت:</strong> {shift.startTime} - {shift.endTime}
+              <strong>نوع شیفت:</strong> {shift.shiftType || ''}
+            </div>
+            <div className="col-md-6 mb-3">
+              <strong>ساعت:</strong> {formatTime(shift.startTime)} - {formatTime(shift.endTime)}
+            </div>
+            <div className="col-md-6 mb-3">
+              <strong>مدت زمان:</strong> ۸ ساعت
             </div>
             <div className="col-md-6 mb-3">
               <strong>نگهبان:</strong> {
-                shift.guard ? (
+                shift.guardId ? (
+                  <Link to={`/guards/${shift.guardId}`}>{shift.guardName || 'نگهبان'}</Link>
+                ) : shift.guard ? (
                   <Link to={`/guards/${shift.guard._id}`}>{shift.guard.name}</Link>
                 ) : 'تعیین نشده'
               }
             </div>
             <div className="col-md-6 mb-3">
               <strong>منطقه:</strong> {
-                shift.area ? (
+                shift.areaId ? (
+                  <Link to={`/areas/${shift.areaId}`}>{shift.areaName || 'منطقه'}</Link>
+                ) : shift.area ? (
                   <Link to={`/areas/${shift.area._id}`}>{shift.area.name}</Link>
                 ) : 'تعیین نشده'
               }
@@ -178,7 +175,7 @@ const ShiftDetail = () => {
             <div className="col-md-6 mb-3">
               <strong>وضعیت:</strong> 
               <span className={`badge ${getStatusBadgeClass(shift.status)} ms-2`}>
-                {getStatusName(shift.status)}
+                {getShiftStatusName(shift.status)}
               </span>
             </div>
             {shift.notes && (
@@ -191,50 +188,48 @@ const ShiftDetail = () => {
         </div>
       </div>
 
-      {isAdmin && (
-        <div className="card">
-          <div className="card-header bg-light">
-            <h5 className="mb-0">عملیات</h5>
-          </div>
-          <div className="card-body">
-            <div className="d-flex gap-2">
-              {shift.status !== 'completed' && (
-                <button 
-                  className="btn btn-success"
-                  onClick={() => handleStatusUpdate('completed')}
-                  disabled={updateStatusLoading}
-                >
-                  <i className="bi bi-check-circle me-1"></i> علامت‌گذاری به عنوان انجام شده
-                </button>
-              )}
-              
-              {shift.status !== 'cancelled' && (
-                <button 
-                  className="btn btn-danger"
-                  onClick={() => handleStatusUpdate('cancelled')}
-                  disabled={updateStatusLoading}
-                >
-                  <i className="bi bi-x-circle me-1"></i> لغو شیفت
-                </button>
-              )}
-              
-              {shift.status !== 'scheduled' && (
-                <button 
-                  className="btn btn-info text-white"
-                  onClick={() => handleStatusUpdate('scheduled')}
-                  disabled={updateStatusLoading}
-                >
-                  <i className="bi bi-calendar-check me-1"></i> برنامه‌ریزی مجدد
-                </button>
-              )}
-              
-              {updateStatusLoading && (
-                <span className="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
-              )}
-            </div>
+      <div className="card">
+        <div className="card-header bg-light">
+          <h5 className="mb-0">عملیات</h5>
+        </div>
+        <div className="card-body">
+          <div className="d-flex gap-2">
+            {shift.status !== 'completed' && (
+              <button 
+                className="btn btn-success"
+                onClick={() => handleStatusUpdate('completed')}
+                disabled={updateStatusLoading}
+              >
+                <i className="bi bi-check-circle me-1"></i> علامت‌گذاری به عنوان انجام شده
+              </button>
+            )}
+            
+            {shift.status !== 'cancelled' && (
+              <button 
+                className="btn btn-danger"
+                onClick={() => handleStatusUpdate('cancelled')}
+                disabled={updateStatusLoading}
+              >
+                <i className="bi bi-x-circle me-1"></i> لغو شیفت
+              </button>
+            )}
+            
+            {shift.status !== 'scheduled' && (
+              <button 
+                className="btn btn-info text-white"
+                onClick={() => handleStatusUpdate('scheduled')}
+                disabled={updateStatusLoading}
+              >
+                <i className="bi bi-calendar-check me-1"></i> برنامه‌ریزی مجدد
+              </button>
+            )}
+            
+            {updateStatusLoading && (
+              <span className="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

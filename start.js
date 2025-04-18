@@ -1,27 +1,23 @@
-const { spawn } = require('child_process');
-const path = require('path');
-const os = require('os');
 const concurrently = require('concurrently');
+const path = require('path');
 
 console.log('🚀 Starting Guard Management System...');
 
 // Run both backend and frontend concurrently
 concurrently([
   { 
-    command: 'nodemon server.js', 
+    command: 'npm run start-backend', 
     name: 'backend', 
-    prefixColor: 'blue',
-    cwd: path.resolve(__dirname)
+    prefixColor: 'blue'
   },
   { 
-    command: 'npm start', 
+    command: 'npm run start-frontend', 
     name: 'frontend', 
-    prefixColor: 'green',
-    cwd: path.resolve(__dirname, 'frontend'),
-    env: { PORT: '3002' } // Set frontend to run on port 3002
+    prefixColor: 'green'
   }
 ], {
   prefix: 'name',
   timestampFormat: 'HH:mm:ss',
   killOthers: ['failure', 'success'],
+  shell: true
 }); 

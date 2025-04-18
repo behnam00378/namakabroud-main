@@ -31,6 +31,7 @@ import ShiftList from './pages/shifts/ShiftList';
 import ShiftDetail from './pages/shifts/ShiftDetail';
 import ShiftForm from './pages/shifts/ShiftForm';
 import ShiftGenerator from './pages/shifts/ShiftGenerator';
+import FixedAreaGuards from './pages/shifts/FixedAreaGuards';
 
 // Leaves pages
 import LeaveList from './pages/leaves/LeaveList';
@@ -64,11 +65,12 @@ function App() {
               <Route path="/areas/edit/:id" element={<AreaForm />} />
               
               {/* Shifts routes */}
-              <Route path="/shifts" element={<ShiftList />} />
-              <Route path="/shifts/:id" element={<ShiftDetail />} />
-              <Route path="/shifts/create" element={<ShiftForm />} />
-              <Route path="/shifts/edit/:id" element={<ShiftForm />} />
-              <Route path="/shifts/generate" element={<ShiftGenerator />} />
+              <Route path="/shifts" element={<ProtectedRoute><ShiftList /></ProtectedRoute>} />
+              <Route path="/shifts/create" element={<ProtectedRoute roles={['admin']}><ShiftForm /></ProtectedRoute>} />
+              <Route path="/shifts/generate" element={<ProtectedRoute roles={['admin']}><ShiftGenerator /></ProtectedRoute>} />
+              <Route path="/shifts/fixed-area-guards" element={<ProtectedRoute><FixedAreaGuards /></ProtectedRoute>} />
+              <Route path="/shifts/edit/:id" element={<ProtectedRoute roles={['admin']}><ShiftForm /></ProtectedRoute>} />
+              <Route path="/shifts/:id" element={<ProtectedRoute><ShiftDetail /></ProtectedRoute>} />
               
               {/* Leaves routes */}
               <Route path="/leaves" element={<LeaveList />} />

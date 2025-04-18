@@ -27,10 +27,22 @@ const LeaveDetail = () => {
     try {
       setLoading(true);
       const response = await LeaveService.getLeaveById(id);
-      setLeave(response.data);
+      
+      // Check if the response structure is as expected
+      const leaveData = response.data?.data || response.data;
+      
+      if (!leaveData || Object.keys(leaveData).length === 0) {
+        setError('مرخصی مورد نظر یافت نشد');
+        setLeave(null);
+        return;
+      }
+      
+      setLeave(leaveData);
+      setError(''); // Clear any existing errors
     } catch (err) {
       console.error('Error fetching leave:', err);
       setError(err.response?.data?.message || 'خطا در دریافت اطلاعات مرخصی');
+      setLeave(null);
     } finally {
       setLoading(false);
     }
@@ -90,14 +102,12 @@ const LeaveDetail = () => {
 
   const getStatusName = (status) => {
     switch (status) {
-      case 'pending':
+      case 'در انتظار':
         return 'در انتظار بررسی';
-      case 'approved':
+      case 'تأیید شده':
         return 'تایید شده';
-      case 'rejected':
+      case 'رد شده':
         return 'رد شده';
-      case 'cancelled':
-        return 'لغو شده';
       default:
         return status;
     }
@@ -105,14 +115,12 @@ const LeaveDetail = () => {
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
-      case 'pending':
+      case 'در انتظار':
         return 'bg-warning';
-      case 'approved':
+      case 'تأیید شده':
         return 'bg-success';
-      case 'rejected':
+      case 'رد شده':
         return 'bg-danger';
-      case 'cancelled':
-        return 'bg-secondary';
       default:
         return 'bg-info';
     }
@@ -121,11 +129,13 @@ const LeaveDetail = () => {
   const canEdit = () => {
     if (!leave) return false;
     if (isAdmin) return true;
-    if (isGuard && leave.guard && leave.guard._id === currentUser.id && leave.status === 'pending') return true;
+    if (isGuard && leave.guardId && leave.guardId._id === currentUser.id && leave.status === 'در انتظار') return true;
     return false;
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString, persianDate) => {
+    if (persianDate) return persianDate;
+    
     const date = new Date(dateString);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -153,8 +163,11 @@ const LeaveDetail = () => {
   }
 
   // Check if guard can view this leave
-  if (isGuard && leave.guard && leave.guard._id !== currentUser.id) {
-    return <div className="alert alert-danger">شما دسترسی به مشاهده این مرخصی را ندارید.</div>;
+  if (isGuard && leave) {
+    const guardIdValue = leave.guardId?._id || leave.guardId;
+    if (guardIdValue && guardIdValue !== currentUser.id) {
+      return <div className="alert alert-danger">شما دسترسی به مشاهده این مرخصی را ندارید.</div>;
+    }
   }
 
   return (
@@ -167,7 +180,7 @@ const LeaveDetail = () => {
             بازگشت به لیست
           </Link>
           
-          {leave.status === 'pending' && (
+          {leave.status === 'در انتظار' && (
             <>
               {isAdmin && (
                 <>
@@ -188,7 +201,7 @@ const LeaveDetail = () => {
                 </>
               )}
               
-              {(isAdmin || (currentUser.id === leave.guard._id)) && (
+              {(isAdmin || (currentUser.id === leave.guardId._id)) && (
                 <>
                   <Link 
                     to={`/leaves/${leave._id}/edit`} 
@@ -226,17 +239,19 @@ const LeaveDetail = () => {
             <div className="col-md-6 mb-3">
               <p className="fw-bold mb-1">نگهبان:</p>
               <p>
-                <Link to={`/guards/${leave.guard._id}`}>
-                  {leave.guard.name}
-                </Link>
+                {leave.guardId ? (
+                  <Link to={`/guards/${leave.guardId._id || leave.guardId}`}>
+                    {leave.guardId.name || (typeof leave.guardId === 'string' ? 'نگهبان' : '')}
+                  </Link>
+                ) : '-'}
               </p>
             </div>
             <div className="col-md-6 mb-3">
               <p className="fw-bold mb-1">نگهبان جایگزین:</p>
               <p>
-                {leave.replacement ? (
-                  <Link to={`/guards/${leave.replacement._id}`}>
-                    {leave.replacement.name}
+                {leave.replacementGuardId ? (
+                  <Link to={`/guards/${leave.replacementGuardId._id || leave.replacementGuardId}`}>
+                    {leave.replacementGuardId.name || (typeof leave.replacementGuardId === 'string' ? 'جایگزین' : '')}
                   </Link>
                 ) : (
                   <span className="text-muted">تعیین نشده</span>
@@ -245,11 +260,11 @@ const LeaveDetail = () => {
             </div>
             <div className="col-md-6 mb-3">
               <p className="fw-bold mb-1">از تاریخ:</p>
-              <p>{formatDate(leave.fromDate)}</p>
+              <p>{formatDate(leave.startDate, leave.persianStartDate)}</p>
             </div>
             <div className="col-md-6 mb-3">
               <p className="fw-bold mb-1">تا تاریخ:</p>
-              <p>{formatDate(leave.toDate)}</p>
+              <p>{formatDate(leave.endDate, leave.persianEndDate)}</p>
             </div>
             <div className="col-md-6 mb-3">
               <p className="fw-bold mb-1">نوع مرخصی:</p>
@@ -264,14 +279,14 @@ const LeaveDetail = () => {
               <p>{leave.reason || <span className="text-muted">دلیلی ذکر نشده است</span>}</p>
             </div>
             
-            {leave.status === 'rejected' && leave.rejectionReason && (
+            {leave.status === 'رد شده' && leave.rejectionReason && (
               <div className="col-md-12 mb-3">
                 <p className="fw-bold mb-1">دلیل رد مرخصی:</p>
                 <p className="text-danger">{leave.rejectionReason}</p>
               </div>
             )}
             
-            {leave.status === 'approved' && leave.approvedBy && (
+            {leave.status === 'تأیید شده' && leave.approvedBy && (
               <div className="col-md-12">
                 <p className="fw-bold mb-1">تایید توسط:</p>
                 <p>{leave.approvedBy.name} در تاریخ {formatDate(leave.approvedAt)}</p>

@@ -336,40 +336,85 @@ exports.handleLeave = async (req, res) => {
   }
 };
 
-// @desc    Find available replacement guards
+// @desc    Get replacement options for a leave
 // @route   GET /api/leaves/:id/replacement-options
+// @route   GET /api/leaves/replacement-options?guardId=XXX&fromDate=XXX&toDate=XXX
 // @access  Private
 exports.getReplacementOptions = async (req, res) => {
   try {
-    const leave = await Leave.findById(req.params.id);
-    if (!leave) {
+    let guardId, startDate, endDate;
+    
+    // Check if we're using query params or route params
+    if (req.params.id) {
+      // We're using the /:id/replacement-options route
+      const leave = await Leave.findById(req.params.id);
+      
+      if (!leave) {
+        return res.status(404).json({
+          success: false,
+          message: 'درخواست مرخصی مورد نظر یافت نشد'
+        });
+      }
+      
+      guardId = leave.guardId;
+      startDate = leave.startDate;
+      endDate = leave.endDate;
+    } else {
+      // We're using the /replacement-options?guardId=XXX&fromDate=XXX&toDate=XXX route
+      if (!req.query.guardId || !req.query.fromDate || !req.query.toDate) {
+        return res.status(400).json({
+          success: false,
+          message: 'پارامترهای guardId، fromDate و toDate الزامی هستند'
+        });
+      }
+      
+      guardId = req.query.guardId;
+      startDate = new Date(req.query.fromDate);
+      endDate = new Date(req.query.toDate);
+    }
+    
+    // Find the guard
+    const guard = await Guard.findById(guardId);
+    if (!guard) {
       return res.status(404).json({
         success: false,
-        message: 'درخواست مرخصی مورد نظر یافت نشد'
+        message: 'نگهبان مورد نظر یافت نشد'
       });
     }
     
-    // Find shifts that need replacement
-    const shiftsToReplace = await Shift.find({
-      guardId: leave.guardId,
-      startTime: { $gte: leave.startDate },
-      endTime: { $lte: leave.endDate }
-    }).populate('areaId', 'name');
+    // Find shifts during this period
+    const shifts = await Shift.find({
+      guardId: guardId,
+      startTime: { $gte: startDate },
+      endTime: { $lte: endDate }
+    }).populate('areaId');
     
-    // Find all active guards except the one on leave
-    const availableGuards = await Guard.find({ 
-      _id: { $ne: leave.guardId },
-      status: 'active'
-    });
+    // Find all guards who are available during these shifts
+    // This is a simplified approach - in a real system, we would need more complex logic
+    // to find guards who are available for all shifts
     
-    // For a real application, you would filter available guards based on their existing shifts
-    // This is a simple implementation that just returns all active guards
+    // First, get all guards
+    const allGuards = await Guard.find({ _id: { $ne: guardId } });
+    
+    // Then, find which guards have overlapping shifts
+    const busyGuardIds = new Set();
+    
+    for (const shift of shifts) {
+      const overlappingShifts = await Shift.find({
+        guardId: { $ne: guardId },
+        startTime: { $lt: shift.endTime },
+        endTime: { $gt: shift.startTime }
+      });
+      
+      overlappingShifts.forEach(s => busyGuardIds.add(s.guardId.toString()));
+    }
+    
+    // Guards who are not busy are available
+    const availableGuards = allGuards.filter(g => !busyGuardIds.has(g._id.toString()));
     
     res.status(200).json({
       success: true,
-      shiftsCount: shiftsToReplace.length,
-      shifts: shiftsToReplace,
-      replacementOptions: availableGuards
+      data: availableGuards
     });
   } catch (error) {
     res.status(500).json({

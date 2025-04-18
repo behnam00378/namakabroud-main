@@ -97,8 +97,7 @@ exports.getShift = async (req, res) => {
   try {
     const shift = await Shift.findById(req.params.id)
       .populate('guardId', 'name email')
-      .populate('areaId', 'name location')
-      .populate('replacementFor', 'name email');
+      .populate('areaId', 'name location');
     
     if (!shift) {
       return res.status(404).json({
@@ -221,7 +220,9 @@ exports.deleteShift = async (req, res) => {
 // @access  Private/Admin
 exports.generateWeeklyShifts = async (req, res) => {
   try {
-    const { weekNumber, year } = req.body;
+    console.log('Received request body for generate shifts:', JSON.stringify(req.body, null, 2));
+    
+    const { weekNumber, year, fixedAssignments, manualShifts } = req.body;
     
     if (!weekNumber) {
       return res.status(400).json({
@@ -247,13 +248,48 @@ exports.generateWeeklyShifts = async (req, res) => {
         message: 'حداقل یک منطقه فعال برای تولید شیفت لازم است'
       });
     }
+
+    // Filter out guards and areas with fixed assignments
+    let availableGuards = [...guards];
+    let availableAreas = [...areas];
+    
+    // Create a map of fixed assignments to avoid generating shifts for them
+    const fixedAssignmentMap = {};
+    
+    if (fixedAssignments && fixedAssignments.length > 0) {
+      // Log the fixed assignments
+      console.log('Fixed assignments received:', JSON.stringify(fixedAssignments, null, 2));
+      
+      // Create a map for quick lookups
+      fixedAssignments.forEach(assignment => {
+        if (!fixedAssignmentMap[assignment.guardId]) {
+          fixedAssignmentMap[assignment.guardId] = new Set();
+        }
+        fixedAssignmentMap[assignment.guardId].add(assignment.areaId);
+      });
+      
+      // Log the fixed assignment map for debugging
+      console.log('Fixed assignment map created:', 
+        Object.keys(fixedAssignmentMap).map(guardId => ({
+          guardId,
+          areas: Array.from(fixedAssignmentMap[guardId])
+        }))
+      );
+    }
+    
+    // Log manual shifts if provided
+    if (manualShifts && manualShifts.length > 0) {
+      console.log('Manual shifts received:', JSON.stringify(manualShifts, null, 2));
+    }
     
     // Generate shifts
     const shiftData = shiftGenerator.generateWeeklyShifts(
-      guards,
-      areas,
+      availableGuards,
+      availableAreas,
       weekNumber,
-      year || moment().jYear()
+      year || moment().jYear(),
+      fixedAssignmentMap, // Pass the fixed assignments map to the generator
+      manualShifts // Pass manual shifts to the generator
     );
     
     // Save all shifts to database
@@ -265,9 +301,11 @@ exports.generateWeeklyShifts = async (req, res) => {
       data: shifts
     });
   } catch (error) {
-    res.status(400).json({
+    console.error('Error generating weekly shifts:', error);
+    
+    res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || 'خطای سرور در تولید شیفت‌های هفتگی'
     });
   }
 };

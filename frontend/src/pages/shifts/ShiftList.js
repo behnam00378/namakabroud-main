@@ -5,7 +5,8 @@ import GuardService from '../../services/guardService';
 import AreaService from '../../services/areaService';
 import Alert from '../../components/layout/Alert';
 import { useAuth } from '../../context/AuthContext';
-import { formatPersianDate } from '../../utils/helpers';
+import { formatPersianDate, formatTime, getShiftStatusName } from '../../utils/helpers';
+import ManualShiftForm from '../../components/ManualShiftForm';
 
 const ShiftList = () => {
   const [searchParams] = useSearchParams();
@@ -28,10 +29,22 @@ const ShiftList = () => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'supervisor');
 
+  const [deletingId, setDeletingId] = useState(null);
+
   useEffect(() => {
     fetchShifts();
     fetchGuards();
     fetchAreas();
+    
+    // Initialize collapse functionality if needed
+    const collapseElementList = document.querySelectorAll('.collapse');
+    if (window.bootstrap && collapseElementList.length > 0) {
+      collapseElementList.forEach(collapseEl => {
+        new window.bootstrap.Collapse(collapseEl, {
+          toggle: false
+        });
+      });
+    }
   }, [guardId, areaId]);
 
   const fetchShifts = async () => {
@@ -81,17 +94,18 @@ const ShiftList = () => {
   const handleDelete = async (id) => {
     if (window.confirm('آیا از حذف این شیفت اطمینان دارید؟')) {
       try {
+        setDeletingId(id);
         await ShiftService.deleteShift(id);
-        setShifts(shifts.filter(shift => shift._id !== id));
-        setSuccessMessage('شیفت با موفقیت حذف شد');
         
-        // Clear success message after 3 seconds
-        setTimeout(() => {
-          setSuccessMessage('');
-        }, 3000);
+        // Remove the deleted shift from the list
+        setShifts(shifts.filter(shift => shift._id !== id));
+        
+        setSuccessMessage('شیفت با موفقیت حذف شد');
       } catch (err) {
         console.error('Error deleting shift:', err);
         setError('خطا در حذف شیفت');
+      } finally {
+        setDeletingId(null);
       }
     }
   };
@@ -123,11 +137,13 @@ const ShiftList = () => {
 
   const getStatusName = (status) => {
     switch (status) {
-      case 'completed':
+      case 'تکمیل شده':
         return 'انجام شده';
-      case 'scheduled':
+      case 'برنامه‌ریزی شده':
         return 'برنامه‌ریزی شده';
-      case 'cancelled':
+      case 'در حال انجام':
+        return 'در حال انجام';
+      case 'لغو شده':
         return 'لغو شده';
       default:
         return status;
@@ -136,11 +152,13 @@ const ShiftList = () => {
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
-      case 'completed':
+      case 'تکمیل شده':
         return 'bg-success';
-      case 'scheduled':
+      case 'برنامه‌ریزی شده':
         return 'bg-info';
-      case 'cancelled':
+      case 'در حال انجام':
+        return 'bg-warning';
+      case 'لغو شده':
         return 'bg-danger';
       default:
         return 'bg-secondary';
@@ -152,6 +170,9 @@ const ShiftList = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>شیفت‌ها</h1>
         <div>
+          <Link to="/shifts/fixed-area-guards" className="btn btn-info ms-2 text-white">
+            <i className="bi bi-person-badge me-1"></i> نگهبانان با منطقه ثابت
+          </Link>
           <Link to="/shifts/generate" className="btn btn-success ms-2">
             <i className="bi bi-calendar-plus me-1"></i> تولید شیفت هفتگی
           </Link>
@@ -232,9 +253,10 @@ const ShiftList = () => {
                   onChange={handleFilterChange}
                 >
                   <option value="">همه وضعیت‌ها</option>
-                  <option value="scheduled">برنامه‌ریزی شده</option>
-                  <option value="completed">انجام شده</option>
-                  <option value="cancelled">لغو شده</option>
+                  <option value="برنامه‌ریزی شده">برنامه‌ریزی شده</option>
+                  <option value="در حال انجام">در حال انجام</option>
+                  <option value="تکمیل شده">انجام شده</option>
+                  <option value="لغو شده">لغو شده</option>
                 </select>
               </div>
             </div>
@@ -246,7 +268,10 @@ const ShiftList = () => {
               >
                 پاک کردن فیلترها
               </button>
-              <button type="submit" className="btn btn-primary">
+              <button 
+                type="submit" 
+                className="btn btn-primary"
+              >
                 اعمال فیلترها
               </button>
             </div>
@@ -254,6 +279,39 @@ const ShiftList = () => {
         </div>
       </div>
 
+      {/* Manual Shift Creation Section */}
+      {isAdmin && (
+        <div className="card mb-4">
+          <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 className="mb-0">ایجاد شیفت دستی</h5>
+            <button 
+              type="button" 
+              className="btn btn-sm btn-light"
+              data-bs-toggle="collapse" 
+              data-bs-target="#collapseManualShift" 
+              aria-expanded="false"
+              aria-controls="collapseManualShift"
+            >
+              <i className="bi bi-chevron-down"></i>
+            </button>
+          </div>
+          <div className="collapse" id="collapseManualShift">
+            <div className="card-body">
+              <ManualShiftForm
+                guards={guards}
+                areas={areas}
+                onSuccess={(message) => {
+                  setSuccessMessage(message);
+                  fetchShifts();
+                }}
+                onError={setError}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Shifts List */}
       {loading ? (
         <div className="text-center my-5">
           <div className="spinner-border text-primary" role="status">
@@ -269,6 +327,7 @@ const ShiftList = () => {
             <thead>
               <tr>
                 <th>تاریخ</th>
+                <th>نوع شیفت</th>
                 <th>ساعت</th>
                 <th>نگهبان</th>
                 <th>منطقه</th>
@@ -279,46 +338,43 @@ const ShiftList = () => {
             <tbody>
               {shifts.map((shift) => (
                 <tr key={shift._id}>
-                  <td>{formatPersianDate(shift.date)}</td>
-                  <td>{shift.startTime} - {shift.endTime}</td>
+                  <td>{formatPersianDate(shift.date || shift.startTime)}</td>
+                  <td>{shift.shiftType || '—'}</td>
+                  <td>{formatTime(shift.startTime)} - {formatTime(shift.endTime)}</td>
+                  <td>{shift.guardId?.name || shift.guard?.name || 'تعیین نشده'}</td>
+                  <td>{shift.areaId?.name || shift.area?.name || 'تعیین نشده'}</td>
                   <td>
-                    {shift.guard ? (
-                      <Link to={`/guards/${shift.guard._id}`}>{shift.guard.name}</Link>
-                    ) : (
-                      'تعیین نشده'
-                    )}
-                  </td>
-                  <td>
-                    {shift.area ? (
-                      <Link to={`/areas/${shift.area._id}`}>{shift.area.name}</Link>
-                    ) : (
-                      'تعیین نشده'
-                    )}
-                  </td>
-                  <td>
-                    <span className={`badge ${getStatusBadgeClass(shift.status)}`}>
-                      {getStatusName(shift.status)}
+                    <span className={`badge ${
+                      shift.status === 'completed' ? 'bg-success' : 
+                      shift.status === 'scheduled' ? 'bg-info' : 
+                      shift.status === 'cancelled' ? 'bg-danger' : 
+                      'bg-secondary'
+                    }`}>
+                      {getShiftStatusName(shift.status)}
                     </span>
                   </td>
                   <td>
-                    <div className="btn-group" role="group">
-                      <Link to={`/shifts/${shift._id}`} className="btn btn-sm btn-info text-white">
-                        <i className="bi bi-eye"></i>
-                      </Link>
-                      {isAdmin && (
-                        <>
-                          <Link to={`/shifts/edit/${shift._id}`} className="btn btn-sm btn-warning text-white">
-                            <i className="bi bi-pencil"></i>
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(shift._id)}
-                            className="btn btn-sm btn-danger"
-                          >
+                    <Link to={`/shifts/${shift._id}`} className="btn btn-sm btn-info text-white me-1">
+                      <i className="bi bi-eye"></i>
+                    </Link>
+                    {isAdmin && (
+                      <>
+                        <Link to={`/shifts/edit/${shift._id}`} className="btn btn-sm btn-warning me-1">
+                          <i className="bi bi-pencil"></i>
+                        </Link>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={() => handleDelete(shift._id)}
+                          disabled={shift._id === deletingId}
+                        >
+                          {shift._id === deletingId ? (
+                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          ) : (
                             <i className="bi bi-trash"></i>
-                          </button>
-                        </>
-                      )}
-                    </div>
+                          )}
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

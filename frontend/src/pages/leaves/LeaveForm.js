@@ -17,11 +17,11 @@ const LeaveForm = () => {
 
   const [formData, setFormData] = useState({
     guardId: currentUser.role === 'guard' ? currentUser.id : '',
-    fromDate: new Date().toISOString().split('T')[0],
-    toDate: new Date().toISOString().split('T')[0],
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
     type: 'regular',
     reason: '',
-    replacementId: ''
+    replacementGuardId: ''
   });
 
   const [loading, setLoading] = useState(false);
@@ -36,7 +36,7 @@ const LeaveForm = () => {
     
     if (isEditMode) {
       fetchLeave();
-    } else if (formData.guardId && formData.fromDate && formData.toDate) {
+    } else if (formData.guardId && formData.startDate && formData.endDate) {
       fetchReplacementOptions();
     }
   }, [id, isAdmin]);
@@ -45,36 +45,43 @@ const LeaveForm = () => {
     try {
       setLoadingLeave(true);
       const response = await LeaveService.getLeaveById(id);
-      const leave = response.data;
+      const leave = response.data?.data || response.data;
+      
+      if (!leave || Object.keys(leave).length === 0) {
+        setError('مرخصی مورد نظر یافت نشد');
+        navigate('/leaves');
+        return;
+      }
       
       // Validate if guard can edit this leave
-      if (currentUser.role === 'guard' && leave.guard._id !== currentUser.id) {
+      const guardIdValue = leave.guardId?._id || leave.guardId;
+      if (currentUser.role === 'guard' && guardIdValue !== currentUser.id) {
         setError('شما دسترسی به ویرایش این مرخصی را ندارید');
         navigate('/leaves');
         return;
       }
       
-      if (leave.status !== 'pending') {
+      if (leave.status !== 'در انتظار') {
         setError('فقط مرخصی‌های در انتظار بررسی قابل ویرایش هستند');
         navigate(`/leaves/${id}`);
         return;
       }
       
       // Format dates for inputs (YYYY-MM-DD)
-      const fromDateFormatted = new Date(leave.fromDate).toISOString().split('T')[0];
-      const toDateFormatted = new Date(leave.toDate).toISOString().split('T')[0];
+      const startDateFormatted = new Date(leave.startDate).toISOString().split('T')[0];
+      const endDateFormatted = new Date(leave.endDate).toISOString().split('T')[0];
       
       setFormData({
-        guardId: leave.guard._id,
-        fromDate: fromDateFormatted,
-        toDate: toDateFormatted,
-        type: leave.type,
+        guardId: guardIdValue,
+        startDate: startDateFormatted,
+        endDate: endDateFormatted,
+        type: leave.type || 'regular',
         reason: leave.reason || '',
-        replacementId: leave.replacement?._id || ''
+        replacementGuardId: leave.replacementGuardId?._id || leave.replacementGuardId || ''
       });
       
       // Fetch replacement options after setting form data
-      fetchReplacementOptions(leave.guard._id, fromDateFormatted, toDateFormatted);
+      fetchReplacementOptions(guardIdValue, startDateFormatted, endDateFormatted);
     } catch (err) {
       console.error('Error fetching leave:', err);
       setError('خطا در دریافت اطلاعات مرخصی');
@@ -95,12 +102,12 @@ const LeaveForm = () => {
     }
   };
 
-  const fetchReplacementOptions = async (guardId = formData.guardId, fromDate = formData.fromDate, toDate = formData.toDate) => {
-    if (!guardId || !fromDate || !toDate) return;
+  const fetchReplacementOptions = async (guardId = formData.guardId, startDate = formData.startDate, endDate = formData.endDate) => {
+    if (!guardId || !startDate || !endDate) return;
     
     try {
       setLoadingOptions(true);
-      const response = await LeaveService.getReplacementOptions(guardId, fromDate, toDate);
+      const response = await LeaveService.getReplacementOptions(guardId, startDate, endDate);
       setReplacementOptions(response.data || []);
     } catch (err) {
       console.error('Error fetching replacement options:', err);
@@ -118,26 +125,26 @@ const LeaveForm = () => {
     }));
     
     // If date or guardId changes, update replacement options
-    if (['guardId', 'fromDate', 'toDate'].includes(name)) {
+    if (['guardId', 'startDate', 'endDate'].includes(name)) {
       if (name === 'guardId') {
         // Reset replacement when guard changes
         setFormData(prev => ({
           ...prev,
-          replacementId: ''
+          replacementGuardId: ''
         }));
       }
       
       // Only fetch if we have all three values
       if (
-        (name === 'guardId' && value && formData.fromDate && formData.toDate) ||
-        (name === 'fromDate' && value && formData.guardId && formData.toDate) ||
-        (name === 'toDate' && value && formData.guardId && formData.fromDate)
+        (name === 'guardId' && value && formData.startDate && formData.endDate) ||
+        (name === 'startDate' && value && formData.guardId && formData.endDate) ||
+        (name === 'endDate' && value && formData.guardId && formData.startDate)
       ) {
         const guardIdToUse = name === 'guardId' ? value : formData.guardId;
-        const fromDateToUse = name === 'fromDate' ? value : formData.fromDate;
-        const toDateToUse = name === 'toDate' ? value : formData.toDate;
+        const startDateToUse = name === 'startDate' ? value : formData.startDate;
+        const endDateToUse = name === 'endDate' ? value : formData.endDate;
         
-        fetchReplacementOptions(guardIdToUse, fromDateToUse, toDateToUse);
+        fetchReplacementOptions(guardIdToUse, startDateToUse, endDateToUse);
       }
     }
   };
@@ -150,10 +157,10 @@ const LeaveForm = () => {
       setError('');
       
       // Validate dates
-      const fromDate = new Date(formData.fromDate);
-      const toDate = new Date(formData.toDate);
+      const startDate = new Date(formData.startDate);
+      const endDate = new Date(formData.endDate);
       
-      if (fromDate > toDate) {
+      if (startDate > endDate) {
         setError('تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد');
         setLoading(false);
         return;
@@ -224,26 +231,26 @@ const LeaveForm = () => {
               )}
               
               <div className="col-md-6 mb-3">
-                <label htmlFor="fromDate" className="form-label">از تاریخ</label>
+                <label htmlFor="startDate" className="form-label">از تاریخ</label>
                 <input
                   type="date"
                   className="form-control"
-                  id="fromDate"
-                  name="fromDate"
-                  value={formData.fromDate}
+                  id="startDate"
+                  name="startDate"
+                  value={formData.startDate}
                   onChange={handleChange}
                   required
                 />
               </div>
               
               <div className="col-md-6 mb-3">
-                <label htmlFor="toDate" className="form-label">تا تاریخ</label>
+                <label htmlFor="endDate" className="form-label">تا تاریخ</label>
                 <input
                   type="date"
                   className="form-control"
-                  id="toDate"
-                  name="toDate"
-                  value={formData.toDate}
+                  id="endDate"
+                  name="endDate"
+                  value={formData.endDate}
                   onChange={handleChange}
                   required
                 />
@@ -265,12 +272,12 @@ const LeaveForm = () => {
               </div>
               
               <div className="col-md-6 mb-3">
-                <label htmlFor="replacementId" className="form-label">نگهبان جایگزین</label>
+                <label htmlFor="replacementGuardId" className="form-label">نگهبان جایگزین</label>
                 <select
                   className="form-select"
-                  id="replacementId"
-                  name="replacementId"
-                  value={formData.replacementId}
+                  id="replacementGuardId"
+                  name="replacementGuardId"
+                  value={formData.replacementGuardId}
                   onChange={handleChange}
                 >
                   <option value="">انتخاب نگهبان جایگزین...</option>

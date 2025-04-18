@@ -15,6 +15,7 @@ const router = express.Router();
 
 // Special routes
 router.post('/:id/handle', protect, authorize('admin', 'supervisor'), handleLeave);
+router.get('/replacement-options', protect, getReplacementOptions);
 router.get('/:id/replacement-options', protect, authorize('admin', 'supervisor'), getReplacementOptions);
 router.get('/guard/:guardId', protect, getLeavesByGuard);
 

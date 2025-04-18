@@ -26,10 +26,12 @@ const LeaveList = () => {
         response = await LeaveService.getAllLeaves();
       } else {
         // For guards, fetch only their own leaves
-        response = await LeaveService.getGuardLeaves(currentUser.id);
+        response = await LeaveService.getLeavesByGuard(currentUser.id);
       }
       
-      setLeaves(response.data || []);
+      // Extract data from the response
+      const leavesData = response.data?.data || [];
+      setLeaves(leavesData);
     } catch (err) {
       console.error('Error fetching leaves:', err);
       setError(err.response?.data?.message || 'خطا در دریافت لیست مرخصی‌ها');
@@ -48,14 +50,12 @@ const LeaveList = () => {
 
   const getStatusName = (status) => {
     switch (status) {
-      case 'pending':
+      case 'در انتظار':
         return 'در انتظار بررسی';
-      case 'approved':
+      case 'تأیید شده':
         return 'تایید شده';
-      case 'rejected':
+      case 'رد شده':
         return 'رد شده';
-      case 'cancelled':
-        return 'لغو شده';
       default:
         return status;
     }
@@ -63,14 +63,12 @@ const LeaveList = () => {
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
-      case 'pending':
+      case 'در انتظار':
         return 'bg-warning';
-      case 'approved':
+      case 'تأیید شده':
         return 'bg-success';
-      case 'rejected':
+      case 'رد شده':
         return 'bg-danger';
-      case 'cancelled':
-        return 'bg-secondary';
       default:
         return 'bg-info';
     }
@@ -87,7 +85,10 @@ const LeaveList = () => {
     }
   };
 
-  const formatDate = (dateString) => {
+  // Display formatted date (use persianStartDate/persianEndDate if available)
+  const formatDate = (dateString, persianDate) => {
+    if (persianDate) return persianDate;
+    
     const date = new Date(dateString);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -97,9 +98,13 @@ const LeaveList = () => {
 
   // Filter leaves based on search term and status filter
   const filteredLeaves = leaves.filter(leave => {
+    // Handle guard name in different structures
+    const guardName = typeof leave.guardId === 'object' ? leave.guardId?.name : '';
+    const replacementName = typeof leave.replacementGuardId === 'object' ? leave.replacementGuardId?.name : '';
+    
     const searchMatches = 
-      (leave.guard?.name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (leave.replacement?.name?.toLowerCase().includes(searchTerm.toLowerCase()));
+      (guardName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (replacementName?.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const statusMatches = statusFilter === 'all' || leave.status === statusFilter;
     
@@ -137,10 +142,9 @@ const LeaveList = () => {
                 onChange={handleStatusFilterChange}
               >
                 <option value="all">همه وضعیت‌ها</option>
-                <option value="pending">در انتظار بررسی</option>
-                <option value="approved">تایید شده</option>
-                <option value="rejected">رد شده</option>
-                <option value="cancelled">لغو شده</option>
+                <option value="در انتظار">در انتظار بررسی</option>
+                <option value="تأیید شده">تایید شده</option>
+                <option value="رد شده">رد شده</option>
               </select>
             </div>
           </div>
@@ -175,16 +179,16 @@ const LeaveList = () => {
             <tbody>
               {filteredLeaves.map(leave => (
                 <tr key={leave._id}>
-                  <td>{leave.guard?.name || '-'}</td>
-                  <td>{formatDate(leave.fromDate)}</td>
-                  <td>{formatDate(leave.toDate)}</td>
+                  <td>{typeof leave.guardId === 'object' ? leave.guardId?.name : '-'}</td>
+                  <td>{formatDate(leave.startDate, leave.persianStartDate)}</td>
+                  <td>{formatDate(leave.endDate, leave.persianEndDate)}</td>
                   <td>{getLeaveTypeName(leave.type)}</td>
                   <td>
                     <span className={`badge ${getStatusBadgeClass(leave.status)}`}>
                       {getStatusName(leave.status)}
                     </span>
                   </td>
-                  <td>{leave.replacement?.name || '-'}</td>
+                  <td>{typeof leave.replacementGuardId === 'object' ? leave.replacementGuardId?.name : '-'}</td>
                   <td>
                     <div className="btn-group">
                       <Link 
@@ -196,7 +200,7 @@ const LeaveList = () => {
                       </Link>
                       
                       {/* Edit button only for pending leaves */}
-                      {leave.status === 'pending' && (
+                      {leave.status === 'در انتظار' && (
                         <Link 
                           to={`/leaves/${leave._id}/edit`} 
                           className="btn btn-sm btn-warning"

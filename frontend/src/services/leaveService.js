@@ -14,9 +14,16 @@ const LeaveService = {
   // Get leave by ID
   getLeaveById: async (id) => {
     try {
+      if (!id) {
+        throw new Error('شناسه مرخصی نامعتبر است');
+      }
       const response = await api.get(`/leaves/${id}`);
       return response.data;
     } catch (error) {
+      console.error('Error fetching leave:', error);
+      if (error.response?.status === 404) {
+        throw { message: 'مرخصی مورد نظر یافت نشد' };
+      }
       throw error.response?.data || { message: 'خطا در دریافت اطلاعات مرخصی' };
     }
   },
@@ -61,10 +68,38 @@ const LeaveService = {
     }
   },
 
-  // Get replacement options for a leave
-  getReplacementOptions: async (leaveId) => {
+  // Approve leave - convenience method
+  approveLeave: async (id, replacementGuardId) => {
     try {
-      const response = await api.get(`/leaves/${leaveId}/replacement-options`);
+      const data = {
+        status: 'تأیید شده',
+        replacementGuardId
+      };
+      return await LeaveService.handleLeave(id, data);
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Reject leave - convenience method
+  rejectLeave: async (id, { reason }) => {
+    try {
+      const data = {
+        status: 'رد شده',
+        rejectionReason: reason
+      };
+      return await LeaveService.handleLeave(id, data);
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Get replacement options for a leave
+  getReplacementOptions: async (guardId, startDate, endDate) => {
+    try {
+      const response = await api.get(`/leaves/replacement-options`, {
+        params: { guardId, startDate, endDate }
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'خطا در دریافت گزینه‌های جایگزین' };
